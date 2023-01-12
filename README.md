@@ -1,0 +1,1 @@
+This is an example for creating a `Lister` using dynamic client for resource of your choice. 
