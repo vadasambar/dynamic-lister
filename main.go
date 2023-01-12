@@ -56,8 +56,8 @@ func main() {
 }
 
 func NewNodeLister(dClient *dynamic.DynamicClient, filter func(*apiv1.Node) bool, stopChannel <-chan struct{}) dynamiclister.Lister {
-	// NewNamespaceKeyedIndexerAndReflector doesn't
-	// mean it can be used for namespaced scope resources only
+	// NewNamespaceKeyedIndexerAndReflector can be
+	// used for both namespace and cluster scoped resources
 	store, reflector := cache.NewNamespaceKeyedIndexerAndReflector(&cache.ListWatch{
 		ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 			return dClient.Resource(nodeGVR).List(context.Background(), options)
