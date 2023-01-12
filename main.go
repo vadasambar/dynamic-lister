@@ -19,8 +19,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// Note that `core` group is set as empty
-// Resource should in plural form
+// Note that for `core` group we use ""
+// Resource should be in plural form e.g., pods, deployments etc.,
 // Ref: https://github.com/kubernetes/client-go/issues/737
 var nodeGVR = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "nodes"}
 
