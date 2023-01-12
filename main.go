@@ -73,6 +73,9 @@ func NewNodeLister(dClient *dynamic.DynamicClient, filter func(*apiv1.Node) bool
 
 	// Wait for reflector to sync the cache for the first time
 	// TODO: check if there's a better way to do this (listing all the nodes seems wasteful)
+	// Note: Based on the docs WaitForNamedCacheSync seems to be used to check if an informer has synced
+	// but the function is generic enough so we can use
+	// it for reflectors as well
 	cache.WaitForNamedCacheSync("node-lister", stopChannel, func() bool {
 		no, err := nodeLister.List(labels.Everything())
 		if err != nil {
