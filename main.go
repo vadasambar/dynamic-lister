@@ -104,7 +104,7 @@ func main() {
 	// // CRD Lister
 	// crdLister := NewDynamicCRDLister(dClient, stopCh)
 
-	// // Get CRDs by specifying the key in the format `<group>/Kind` (<- Kind needs to be camelcase)
+	// // Get CRDs by specifying the key in the format `<group>/Kind` (<- Kind needs to be in CamelCase)
 	// // Note that this is quite different from specifying the key as `<namespace>/<name>`
 	// no, err := crdLister.Get("traefik.containo.us/ServersTransport")
 	// if err != nil {
