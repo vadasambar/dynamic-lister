@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -100,6 +101,22 @@ func main() {
 	}
 	fmt.Println("") // add some space after the last line for better display
 
+	// CRD Lister
+	crdLister := NewDynamicCRDLister(dClient, stopCh)
+
+	// Get CRDs by specifying the key in the format `<group>/Kind` (<- Kind needs to be camelcase)
+	// Note that this is quite different from specifying the key as `<namespace>/<name>`
+	no, err := crdLister.Get("traefik.containo.us/ServersTransport")
+	if err != nil {
+		panic(err)
+	}
+	// pretty print
+	output, err := json.MarshalIndent(no, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("CRD", string(output))
+
 }
 
 func NewDynamicLister(dClient *dynamic.DynamicClient, stopChannel <-chan struct{}, gvr schema.GroupVersionResource, namespace string) dynamiclister.Lister {
@@ -148,4 +165,85 @@ func NewDynamicLister(dClient *dynamic.DynamicClient, stopChannel <-chan struct{
 	}
 
 	return nodeLister
+}
+
+func NewDynamicCRDLister(dClient *dynamic.DynamicClient, stopChannel <-chan struct{}) dynamiclister.Lister {
+
+	var lister func(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error)
+	var watcher func(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+
+	gvr := schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
+
+	lister = dClient.Resource(gvr).List
+	watcher = dClient.Resource(gvr).Watch
+	store := cache.NewIndexer( /* Key Func*/ func(obj interface{}) (string, error) {
+		uo := obj.(*unstructured.Unstructured)
+		o := uo.Object
+		group, found, err := unstructured.NestedString(o, "spec", "group")
+		if !found {
+			fmt.Printf("didn't find value on %v", uo.GetName())
+		}
+		if err != nil {
+			fmt.Printf("err: %v", err)
+		}
+
+		names, found, err := unstructured.NestedStringMap(o, "spec", "names")
+		if !found {
+			fmt.Printf("didn't find value on %v", uo.GetName())
+		}
+		if err != nil {
+			fmt.Printf("err: %v", err)
+		}
+
+		// Key is <group>/<Kind> as opposed to <namespace>/name
+		// This is so that you can find CRD just using Kind and API Group
+		// instead of knowing the name
+		return group + "/" + names["kind"], nil
+	}, cache.Indexers{"group": /* Index Func */ func(obj interface{}) ([]string, error) {
+		uo := obj.(*unstructured.Unstructured)
+		o := uo.Object
+		group, found, err := unstructured.NestedString(o, "spec", "group")
+		if !found {
+			fmt.Printf("didn't find value on %v", uo.GetName())
+		}
+		if err != nil {
+			return []string{""}, fmt.Errorf("err: %v", err)
+		}
+		/* Index by APi Group of the CRD */
+		return []string{group}, nil
+	}})
+
+	lw := &cache.ListWatch{
+		ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
+			return lister(context.Background(), options)
+		},
+		WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
+			return watcher(context.Background(), options)
+		},
+	}
+
+	reflector := cache.NewReflector(lw, unstructured.Unstructured{}, store, time.Hour)
+
+	crdLister := dynamiclister.New(store, gvr)
+
+	// Run reflector in the background so that we get new updates from the api-server
+	go reflector.Run(stopChannel)
+
+	// Wait for reflector to sync the cache for the first time
+	// TODO: check if there's a better way to do this (listing all the nodes seems wasteful)
+	// Note: Based on the docs WaitForNamedCacheSync seems to be used to check if an informer has synced
+	// but the function is generic enough so we can use
+	// it for reflectors as well
+	synced := cache.WaitForNamedCacheSync(fmt.Sprintf("generic-%s-lister", gvr.Resource), stopChannel, func() bool {
+		no, err := crdLister.List(labels.Everything())
+		if err != nil {
+			klog.Error("err", err)
+		}
+		return len(no) > 0
+	})
+	if !synced {
+		klog.Error("couldn't sync cache")
+	}
+
+	return crdLister
 }
