@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -101,21 +100,22 @@ func main() {
 	}
 	fmt.Println("") // add some space after the last line for better display
 
-	// CRD Lister
-	crdLister := NewDynamicCRDLister(dClient, stopCh)
+	// Uncomment to use the CRD Lister
+	// // CRD Lister
+	// crdLister := NewDynamicCRDLister(dClient, stopCh)
 
-	// Get CRDs by specifying the key in the format `<group>/Kind` (<- Kind needs to be camelcase)
-	// Note that this is quite different from specifying the key as `<namespace>/<name>`
-	no, err := crdLister.Get("traefik.containo.us/ServersTransport")
-	if err != nil {
-		panic(err)
-	}
-	// pretty print
-	output, err := json.MarshalIndent(no, "", "  ")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("CRD", string(output))
+	// // Get CRDs by specifying the key in the format `<group>/Kind` (<- Kind needs to be camelcase)
+	// // Note that this is quite different from specifying the key as `<namespace>/<name>`
+	// no, err := crdLister.Get("traefik.containo.us/ServersTransport")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// // pretty print
+	// output, err := json.MarshalIndent(no, "", "  ")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Println("CRD", string(output))
 
 }
 
