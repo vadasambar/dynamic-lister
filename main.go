@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	dynamiclister "k8s.io/client-go/dynamic/dynamiclister"
+	kube_client "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
@@ -35,7 +37,12 @@ func main() {
 		panic(err)
 	}
 
-	dClient := dynamic.NewForConfigOrDie(restConfig)
+	kubeClient := createKubeClient(restConfig)
+	dClient := dynamic.New(kubeClient.Discovery().RESTClient())
+
+	// as an alternative to dynamic.New(), you can uncomment
+	//  the following line to create a dynamic client
+	// dClient := dynamic.NewForConfigOrDie(restConfig)
 
 	// For stopping the reflector
 	stopCh := make(chan struct{})
@@ -246,4 +253,9 @@ func NewDynamicCRDLister(dClient *dynamic.DynamicClient, stopChannel <-chan stru
 	}
 
 	return crdLister
+}
+
+// createKubeClient mimics function of the same name in cluster-autoscaler
+func createKubeClient(kubeConfig *rest.Config) kube_client.Interface {
+	return kube_client.NewForConfigOrDie(kubeConfig)
 }
