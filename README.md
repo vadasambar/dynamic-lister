@@ -59,3 +59,6 @@ local-path-provisioner-7b7dc8d6f5-q8k6x
 svclb-traefik-98312b71-66crq
 coredns-b96499967-tmswr
 ```
+
+## Why did I create this?
+This is originally a PoC for a [PR I was working on for cluster-autoscaler](https://github.com/kubernetes/autoscaler/pull/5419#discussion_r1071752946). I cleaned the code a bit and added comments to make this a generic PoC/example for anyone who wants to use dynamic listers. 
